@@ -28,6 +28,7 @@ int gstreamer_init(int, char **);
 
 #define CONTENT_TYPE_VIDEO_ONLY   0
 #define CONTENT_TYPE_AUDIO_VIDEO  1
+#define CONTENT_TYPE_AUDIO_ONLY   2
 
 #define APP_NAME "kvs_gstreamer_file_uploader_sample"
 #define LOG_INFO(fmt, ...) \
@@ -100,15 +101,18 @@ int gstreamer_init(int argc, char* argv[], CustomData *data) {
         demuxer = "qtdemux";
     } else if (file_suffix.compare(".ts") == 0) {
         demuxer = "tsdemux";
-    } else {
-        LOG_ERROR("File format not supported. Supported ones are mp4, mkv and ts. File suffix: %s", file_suffix.c_str());
-        return 1;
     }
 
     if (data->content_type == CONTENT_TYPE_VIDEO_ONLY) { // video only
         ret = snprintf(pipeline_buf, sizeof(pipeline_buf),
             "filesrc location=%s ! %s ! h264parse ! video/x-h264,stream-format=avc,alignment=au ! %s",
             file_path.c_str(), demuxer, data->kvssink_str.c_str()
+        );
+    } else if (data->content_type == CONTENT_TYPE_AUDIO_ONLY) { // audio only
+        LOG_ERROR("Audio only");
+        ret = snprintf(pipeline_buf, sizeof(pipeline_buf),
+            "filesrc location=%s ! wavparse ! audio/x-raw,format=S16LE,layout=interleaved ! %s",
+            file_path.c_str(), data->kvssink_str.c_str()
         );
     } else { // audio-video
         ret = snprintf(pipeline_buf, sizeof(pipeline_buf),
@@ -274,6 +278,10 @@ int main(int argc, char* argv[]) {
             data.content_type = CONTENT_TYPE_AUDIO_VIDEO;
         } else if (strcmp(argv[4], "video-only") == 0) {
             LOG_INFO("Uploading video only");
+        }
+        else if (strcmp(argv[4], "audio-only") == 0) {
+            LOG_INFO("Uploading audio only");
+            data.content_type = CONTENT_TYPE_AUDIO_ONLY;
         } else {
             LOG_INFO("Unrecognized upload type. Default to video-only");
         }

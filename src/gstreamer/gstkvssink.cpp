@@ -101,7 +101,7 @@ GST_DEBUG_CATEGORY_STATIC (gst_kvs_sink_debug);
 #define DEFAULT_TRACKNAME "kinesis_video"
 #define DEFAULT_ACCESS_KEY "access_key"
 #define DEFAULT_SECRET_KEY "secret_key"
-#define DEFAULT_REGION "us-west-2"
+#define DEFAULT_REGION "us-east-1"
 #define DEFAULT_ROTATION_PERIOD_SECONDS 3600
 #define DEFAULT_LOG_FILE_PATH "../kvs_log_configuration"
 #define DEFAULT_STORAGE_SIZE_MB 128
@@ -125,6 +125,7 @@ GST_DEBUG_CATEGORY_STATIC (gst_kvs_sink_debug);
 #define GSTREAMER_MEDIA_TYPE_AAC        "audio/mpeg"
 #define GSTREAMER_MEDIA_TYPE_MULAW      "audio/x-mulaw"
 #define GSTREAMER_MEDIA_TYPE_ALAW       "audio/x-alaw"
+#define GSTREAMER_MEDIA_TYPE_RAW        "audio/x-raw"
 
 #define MAX_GSTREAMER_MEDIA_TYPE_LEN    16
 
@@ -189,6 +190,7 @@ static GstStaticPadTemplate audiosink_templ =
                                  GST_STATIC_CAPS (
                                          "audio/mpeg, mpegversion = (int) { 2, 4 }, stream-format = (string) raw, channels = (int) [ 1, MAX ], rate = (int) [ 1, MAX ] ; " \
                                          "audio/x-alaw, channels = (int) { 1, 2 }, rate = (int) [ 8000, 192000 ] ; " \
+                                         "audio/x-raw, channels = (int) { 1, 2 }, rate = (int) [ 8000, 192000 ] ;" \
                                          "audio/x-mulaw, channels = (int) { 1, 2 }, rate = (int) [ 8000, 192000 ] ; "
                                  )
         );
@@ -1283,7 +1285,6 @@ init_track_data(GstKvsSink *kvssink) {
 
     for (walk = kvssink->collect->data; walk != NULL; walk = g_slist_next (walk)) {
         GstKvsSinkTrackData *kvs_sink_track_data = (GstKvsSinkTrackData *) walk->data;
-
         if (kvs_sink_track_data->track_type == MKV_TRACK_INFO_TYPE_VIDEO) {
 
             if (kvssink->data->media_type == AUDIO_VIDEO) {
@@ -1331,8 +1332,9 @@ init_track_data(GstKvsSink *kvssink) {
                 kvssink->audio_codec_id = g_strdup(DEFAULT_AUDIO_CODEC_ID_PCM);
                 audio_content_type = g_strdup(MKV_MULAW_CONTENT_TYPE);
             } else {
-                // no-op, should result in a caps negotiation error before getting here.
-                LOG_AND_THROW("Error, media type " << media_type << "not accepted by kvssink");
+                g_free(kvssink->audio_codec_id);
+                kvssink->audio_codec_id = g_strdup(MKV_PCM_INT_LIT_CODEC_ID);
+                audio_content_type = g_strdup(MKV_RAW_CONTENT_TYPE);
             }
             gst_caps_unref(caps);
         }
