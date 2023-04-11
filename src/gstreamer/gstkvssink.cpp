@@ -101,7 +101,7 @@ GST_DEBUG_CATEGORY_STATIC (gst_kvs_sink_debug);
 #define DEFAULT_TRACKNAME "kinesis_video"
 #define DEFAULT_ACCESS_KEY "access_key"
 #define DEFAULT_SECRET_KEY "secret_key"
-#define DEFAULT_REGION "us-east-1"
+#define DEFAULT_REGION "us-west-2"
 #define DEFAULT_ROTATION_PERIOD_SECONDS 3600
 #define DEFAULT_LOG_FILE_PATH "../kvs_log_configuration"
 #define DEFAULT_STORAGE_SIZE_MB 128
@@ -1331,10 +1331,13 @@ init_track_data(GstKvsSink *kvssink) {
                 g_free(kvssink->audio_codec_id);
                 kvssink->audio_codec_id = g_strdup(DEFAULT_AUDIO_CODEC_ID_PCM);
                 audio_content_type = g_strdup(MKV_MULAW_CONTENT_TYPE);
-            } else {
+            } else if (strncmp(media_type, GSTREAMER_MEDIA_TYPE_RAW, MAX_GSTREAMER_MEDIA_TYPE_LEN) == 0) {
                 g_free(kvssink->audio_codec_id);
                 kvssink->audio_codec_id = g_strdup(MKV_PCM_INT_LIT_CODEC_ID);
-                audio_content_type = g_strdup(MKV_RAW_CONTENT_TYPE);
+                audio_content_type = g_strdup(MKV_MULAW_CONTENT_TYPE);
+            } else {
+                // no-op, should result in a caps negotiation error before getting here.
+                LOG_AND_THROW("Error, media type " << media_type << "not accepted by kvssink");
             }
             gst_caps_unref(caps);
         }
